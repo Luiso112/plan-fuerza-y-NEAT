@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan de Fuerza & NEAT</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              950: '#042f2e',
+            },
+            relax: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              900: '#4c1d95',
+              950: '#2e1065',
+            },
+            studio: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .font-mono-custom {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Seamless visual breaths */
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(0.95); opacity: 0.5; }
+    }
+    .ring-active {
+      animation: pulseRing 3s ease-in-out infinite;
+    }
+
+    /* Breathing Animation Keyframes */
+    @keyframes breatheIn {
+      0% { transform: scale(1); background-color: #a7f3d0; }
+      100% { transform: scale(1.8); background-color: #34d399; }
+    }
+    @keyframes breatheHold {
+      0% { transform: scale(1.8); background-color: #34d399; }
+      100% { transform: scale(1.8); background-color: #60a5fa; }
+    }
+    @keyframes breatheOut {
+      0% { transform: scale(1.8); background-color: #60a5fa; }
+      100% { transform: scale(1); background-color: #a7f3d0; }
+    }
+
+    .anim-inhale {
+      animation: breatheIn 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .anim-hold {
+      animation: breatheHold 7s linear forwards;
+    }
+    .anim-exhale {
+      animation: breatheOut 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Print styling rules to ensure neat physical output */
+    @media print {
+      body {
+        background-color: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        border: 1px solid #e2e8f0 !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+      }
+      .print-break-before {
+        page-break-before: always;
+      }
+      .text-teal-400, .text-indigo-400, .text-amber-500 {
+        color: #0f766e !important;
+      }
+      .print-full-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-studio-950 dark:text-slate-100 min-h-screen pb-16 transition-colors duration-300">
+
+  <!-- TOP HEADER & CONTROLS -->
+  <header class="bg-gradient-to-r from-teal-950 via-slate-900 to-indigo-950 text-white shadow-2xl relative overflow-hidden print:bg-white print:text-slate-900">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.12),transparent_60%)]"></div>
+    <div class="max-w-5xl mx-auto px-6 py-10 relative z-10">
+      
+      <!-- Top Actions Bar -->
+      <div class="flex justify-between items-center mb-6 no-print">
+        <div class="flex items-center gap-2">
+          <!-- Active Pulsing Badge -->
+          <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <span class="text-xs font-semibold tracking-wide text-teal-300 uppercase">Sistema Interactivo Conectado</span>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <!-- Theme Toggle (Studio/Clinical) -->
+          <button onclick="toggleTheme()" class="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl border border-white/15 transition-all flex items-center gap-2 text-xs" title="Cambiar tema">
+            <span class="dark:hidden">🌌 Modo Estudio (Oscuro)</span>
+            <span class="hidden dark:inline">☀️ Modo Clínico (Claro)</span>
+          </button>
+          
+          <!-- PDF Export -->
+          <button onclick="window.print()" class="bg-teal-500 hover:bg-teal-400 active:bg-teal-600 text-slate-950 font-bold px-4 py-2 rounded-xl shadow-lg shadow-teal-500/20 flex items-center gap-2 transition duration-200 text-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Imprimir Dossier
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Header Title -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <span class="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs uppercase px-3 py-1 rounded-full font-bold tracking-wider">
+              Plan de Activación 2026
+            </span>
+            <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs uppercase px-3 py-1 rounded-full font-bold tracking-wider">
+              Fase 1: Activación Metabólica
+            </span>
+          </div>
+          <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight">Prescripción de Fuerza & NEAT</h1>
+          <p class="text-teal-200/90 mt-2 font-light text-sm md:text-lg">Dossier digital de soporte físico. Fusión de movimiento inteligente y modulación del estrés laboral.</p>
+        </div>
+      </div>
+      
+      <!-- Patient Metadata Card -->
+      <div class="mt-8 p-6 bg-white/5 border border-white/10 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+        <div>
+          <span class="text-slate-400 block mb-1 text-xs uppercase tracking-wider">Foco del Programa</span>
+          <span class="font-semibold text-slate-100 block">Preservación de Masa Magra</span>
+          <span class="text-teal-300/80 text-xs">Alta Demanda Intelectual</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block mb-1 text-xs uppercase tracking-wider">Prescripción Base</span>
+          <span class="font-semibold text-slate-100 block">Fuerza 3x/sem + NEAT</span>
+          <span class="text-indigo-300/80 text-xs">Fórmula de Pausa Activa</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block mb-1 text-xs uppercase tracking-wider">Meta Nutricional</span>
+          <span class="font-semibold text-teal-300 block">Déficit Selectivo (~2,000 kcal)</span>
+          <span class="text-slate-300 text-xs">Protección metabólica profunda</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block mb-1 text-xs uppercase tracking-wider font-bold">Próximo Control</span>
+          <span class="font-semibold text-indigo-300 block">Mensual (Próximo: 1 Jun 2026)</span>
+          <span class="text-slate-300 text-xs">Evaluación de adherencia</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-5xl mx-auto px-4 md:px-6 py-8 space-y-8">
+    
+    <!-- NOTIFICACIÓN CLÍNICA -->
+    <div class="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 p-5 rounded-r-2xl shadow-sm flex items-start gap-4 transition-all duration-300">
+      <div class="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-xl text-amber-700 dark:text-amber-400 shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <div>
+        <h4 class="font-bold text-amber-900 dark:text-amber-300 text-sm md:text-base">Estrategia Antídoto: Rompiendo el Bucle de Sedentarismo</h4>
+        <p class="text-amber-800 dark:text-amber-400/95 text-xs md:text-sm mt-1 leading-relaxed">
+          Trabajar más de 12 horas diarias frente al escritorio y pantallas reduce significativamente la sensibilidad a la insulina y el flujo sanguíneo cerebral. Esta rutina de fuerza y descansos NEAT protege tus articulaciones de posturas sostenidas y mantiene tu metabolismo activo sin inducir fatiga central que comprometa tu enfoque de trabajo.
+        </p>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE DAILY TRACKER (LOCAL STORAGE PERSISTED) -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-lg border border-slate-100 dark:border-slate-800 no-print">
+      <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 p-2.5 rounded-2xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </div>
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold">Cuadro de Control Diario</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Registra tus hábitos hoy para asegurar la adherencia al plan.</p>
+          </div>
+        </div>
+        <button onclick="resetMetrics()" class="text-xs text-rose-500 hover:text-rose-600 font-semibold border border-rose-200 dark:border-rose-900 px-3 py-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">
+          Reiniciar Día
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Steps Logger -->
+        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wide">Caminata / Pasos</span>
+            <h3 class="text-2xl font-extrabold mt-1" id="val-steps">0</h3>
+            <p class="text-xs text-slate-400 mt-1">Meta recomendada: 10,000 pasos</p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button onclick="addMetric('steps', -1000)" class="bg-white dark:bg-slate-800 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition flex-1">-1k</button>
+            <button onclick="addMetric('steps', 1000)" class="bg-teal-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold hover:bg-teal-700 transition flex-1">+1k</button>
+          </div>
+        </div>
+
+        <!-- Water Logger -->
+        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Hidratación</span>
+            <h3 class="text-2xl font-extrabold mt-1"><span id="val-water">0</span> / 8 <span class="text-xs font-normal text-slate-400">vasos</span></h3>
+            <p class="text-xs text-slate-400 mt-1">Vital para mantener concentración y foco</p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button onclick="addMetric('water', -1)" class="bg-white dark:bg-slate-800 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition flex-1">-1</button>
+            <button onclick="addMetric('water', 1)" class="bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition flex-1">+1</button>
+          </div>
+        </div>
+
+        <!-- Calories Consumed -->
+        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Energía Consumida</span>
+            <h3 class="text-2xl font-extrabold mt-1" id="val-calories">1,900 kcal</h3>
+            <p class="text-xs text-slate-400 mt-1">Límite para recomposición: 2,000</p>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button onclick="adjustCalories(-100)" class="bg-white dark:bg-slate-800 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition flex-1">-100</button>
+            <button onclick="adjustCalories(100)" class="bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold hover:bg-amber-700 transition flex-1">+100</button>
+          </div>
+        </div>
+
+        <!-- Workout tracker -->
+        <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Progreso del Día</span>
+            <div class="mt-2 flex items-center gap-2">
+              <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                <div id="overall-progress-bar" class="bg-indigo-600 h-full w-[0%] transition-all duration-300"></div>
+              </div>
+              <span id="overall-progress-text" class="text-xs font-bold shrink-0">0%</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">Calculado a partir de tus ejercicios completados.</p>
+          </div>
+          <div class="mt-4 bg-white dark:bg-slate-800 p-2 rounded-xl text-center text-xs border border-slate-150 dark:border-slate-700 font-medium" id="tracker-motivation">
+            ¡Comienza tu día con NEAT!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 1: PROTOCOLO NEAT -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-md border border-slate-100 dark:border-slate-800 relative overflow-hidden print-card">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-teal-50 dark:bg-teal-950/20 rounded-full blur-3xl -z-10"></div>
+      
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-teal-100 dark:bg-teal-950 p-2.5 rounded-2xl text-teal-700 dark:text-teal-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold">1. Protocolo NEAT (Gasto Calórico No-Ejercicio)</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Inyecciones de movimiento táctico integradas para elevar el flujo de oxígeno al cerebro.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 print-full-grid">
+        <!-- Tarjeta Alarma Activa -->
+        <div class="bg-gradient-to-br from-teal-50/40 to-emerald-50/20 dark:from-slate-800/40 dark:to-teal-950/20 border border-teal-100/50 dark:border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-100/60 dark:bg-teal-900/40 px-2.5 py-1 rounded-md uppercase tracking-wide">Pausa Dinámica</span>
+              <span class="text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </span>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Micro-Dosis Anti-Sedentarismo</h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-4">
+              Cada hora de sesión frente a tu escritorio, ejecuta una de las siguientes opciones durante un break de 2 minutos para oxigenar tu flujo de trabajo:
+            </p>
+            <ul class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+              <li class="flex items-start gap-2.5">
+                <span class="bg-teal-500 text-slate-950 font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5 shrink-0">A</span>
+                <span><strong>10 Sentadillas profundas</strong> controlando el descenso y empujando el suelo con los talones.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="bg-teal-500 text-slate-950 font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5 shrink-0">B</span>
+                <span><strong>10 Flexiones en escritorio</strong> manteniendo tus hombros abajo y codos a 45 grados.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="bg-teal-500 text-slate-950 font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs mt-0.5 shrink-0">C</span>
+                <span><strong>60 segundos de movilidad</strong> (Movilidad cervical + rotaciones escapulares amplias).</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Interactivo: Simulador de Recordatorio NEAT -->
+          <div class="no-print mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
+            <span class="text-xs text-slate-400 block mb-2">Configurar Alarma de Trabajo (NEAT)</span>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <button onclick="changeNeatDuration(30)" id="neat-30" class="text-xs px-2.5 py-1 rounded-lg transition font-medium">30m</button>
+                <button onclick="changeNeatDuration(45)" id="neat-45" class="text-xs px-2.5 py-1 rounded-lg transition font-medium">45m</button>
+                <button onclick="changeNeatDuration(60)" id="neat-60" class="text-xs px-2.5 py-1 rounded-lg transition font-medium bg-white dark:bg-slate-700 shadow-sm">60m</button>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <!-- Sound Toggle -->
+                <button onclick="toggleSoundPreference()" id="neat-sound-btn" class="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition" title="Activar/Silenciar sonido de aviso">
+                  🔊
+                </button>
+                <button id="neat-timer-btn" onclick="toggleNeatTimer()" class="bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold text-xs py-2 px-4 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-teal-500/10">
+                  <span id="neat-btn-icon">⏱️</span>
+                  <span id="neat-btn-text">Iniciar Temporizador</span>
+                </button>
+              </div>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+              <span>Estado:</span>
+              <span id="neat-timer-display" class="font-bold text-teal-600 dark:text-teal-400 font-mono-custom">Listo para iniciar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta Optimizador de Caminatas -->
+        <div class="bg-gradient-to-br from-slate-50 to-indigo-50/30 dark:from-slate-800/20 dark:to-indigo-950/20 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-md uppercase tracking-wide">Ritmo Circadiano</span>
+              <span class="text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+              </span>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Caminatas Diarias Estratégicas</h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-4">
+              Dividir tu caminata obligatoria de <strong>40 minutos diarios</strong> previene picos de fatiga mental y optimiza tus hormonas reguladoras del sueño:
+            </p>
+            <div class="space-y-3">
+              <div class="bg-white/90 dark:bg-slate-800 p-3.5 rounded-xl border border-indigo-100/50 dark:border-slate-700 flex items-start gap-3">
+                <span class="text-2xl mt-0.5">🌅</span>
+                <div>
+                  <h4 class="font-bold text-xs">Caminata Matutina (20 min)</h4>
+                  <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Realizada dentro de las primeras 2 horas tras despertar. Recibe luz natural en tus ojos para apagar la melatonina e iniciar el cortisol saludable.</p>
+                </div>
+              </div>
+              <div class="bg-white/90 dark:bg-slate-800 p-3.5 rounded-xl border border-indigo-100/50 dark:border-slate-700 flex items-start gap-3">
+                <span class="text-2xl mt-0.5">🌆</span>
+                <div>
+                  <h4 class="font-bold text-xs">Caminata de Cierre (20 min)</h4>
+                  <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Desconexión laboral. Camina a paso ligero al culminar tus tareas de escritorio. Marca la frontera psicológica definitiva entre tu trabajo y tu descanso.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: RUTINA DE FUERZA -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-md border border-slate-100 dark:border-slate-800 print-card">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="bg-indigo-100 dark:bg-indigo-950 p-2.5 rounded-2xl text-indigo-700 dark:text-indigo-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          </div>
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold">2. Rutina de Fuerza Resiliente (3 veces por semana)</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Calistenia enfocada a la protección postural y mantenimiento de tejido metabólicamente activo.</p>
+          </div>
+        </div>
+        
+        <!-- Quick stats -->
+        <div class="flex gap-2 text-xs font-semibold shrink-0">
+          <span class="bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900 px-3 py-1.5 rounded-lg">3-4 Series por Ejercicio</span>
+          <span class="bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border border-teal-100 dark:border-teal-900 px-3 py-1.5 rounded-lg">Pausas: 45s a 2m</span>
+        </div>
+      </div>
+
+      <!-- Rutina Checklist & Cards -->
+      <div class="grid md:grid-cols-2 gap-6 mb-8 print-full-grid">
+        
+        <!-- Ejercicio 1 -->
+        <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 hover:shadow-md" id="exercise-card-1">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-teal-500 text-slate-950 font-extrabold text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wide">Tren Inferior</span>
+              <label class="no-print flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 select-none">
+                <input type="checkbox" onchange="toggleExerciseComplete(this, 1)" class="rounded text-teal-500 focus:ring-teal-500 w-4 h-4 border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                <span class="font-semibold">Hecho</span>
+              </label>
+            </div>
+            <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg flex items-center gap-2">
+              <span class="text-teal-600 dark:text-teal-400">01.</span> Sentadillas con Pausa Isométrica
+            </h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
+              Pies con anchura de hombros, puntas rotadas 15º. Desciende controlando en <strong>3 segundos</strong>, mantén la máxima profundidad <strong>1 segundo</strong> completo sin perder la tensión de la espalda y empuja de manera explosiva.
+            </p>
+            
+            <!-- Tech cues (Toggleable) -->
+            <details class="no-print mt-3 text-xs text-slate-500 dark:text-slate-400 group">
+              <summary class="cursor-pointer font-bold text-teal-600 dark:text-teal-400 hover:underline">Instrucciones de técnica</summary>
+              <div class="mt-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1">
+                <p>✅ <strong>Foco:</strong> Mantener el talón totalmente adherido al suelo. Rodillas alineadas con la punta del pie.</p>
+                <p>💡 <strong>Progresión:</strong> Si es muy fácil, sostén un peso o botellón contra tu pecho.</p>
+                <p>⚠️ <strong>Regresión:</strong> Si hay molestia, desciende solo hasta la altura que te permita una silla.</p>
+              </div>
+            </details>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-150 dark:border-slate-700 flex justify-between items-center mt-5">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Objetivo de volumen</span>
+            <span class="font-mono-custom font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">10 a 12 Reps</span>
+          </div>
+        </div>
+
+        <!-- Ejercicio 2 -->
+        <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 hover:shadow-md" id="exercise-card-2">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-indigo-500 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wide">Tren Superior (Empuje)</span>
+              <label class="no-print flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 select-none">
+                <input type="checkbox" onchange="toggleExerciseComplete(this, 2)" class="rounded text-teal-500 focus:ring-teal-500 w-4 h-4 border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                <span class="font-semibold">Hecho</span>
+              </label>
+            </div>
+            <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg flex items-center gap-2">
+              <span class="text-indigo-600 dark:text-indigo-400">02.</span> Flexiones Inclinadas en Mesa
+            </h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
+              Coloca tus manos firmemente en el borde de una mesa robusta o superficie estable. Mantén tu abdomen tan rígido como una tabla y desciende permitiendo que tus codos viajen hacia atrás en un ángulo de 45º con tu torso.
+            </p>
+            
+            <details class="no-print mt-3 text-xs text-slate-500 dark:text-slate-400 group">
+              <summary class="cursor-pointer font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Instrucciones de técnica</summary>
+              <div class="mt-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1">
+                <p>✅ <strong>Foco:</strong> No permitas que tu pelvis se hunda. Activa tus glúteos intensamente para asegurar una postura neutra.</p>
+                <p>💡 <strong>Progresión:</strong> Desciende la superficie de apoyo (ej. usar el primer escalón o el suelo) para mayor intensidad.</p>
+                <p>⚠️ <strong>Regresión:</strong> Realiza la flexión apoyando tus manos contra la pared para descargar peso.</p>
+              </div>
+            </details>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-150 dark:border-slate-700 flex justify-between items-center mt-5">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Objetivo de volumen</span>
+            <span class="font-mono-custom font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">8 a 10 Reps</span>
+          </div>
+        </div>
+
+        <!-- Ejercicio 3 -->
+        <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 hover:shadow-md" id="exercise-card-3">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-teal-500 text-slate-950 font-extrabold text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wide">Unilateral</span>
+              <label class="no-print flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 select-none">
+                <input type="checkbox" onchange="toggleExerciseComplete(this, 3)" class="rounded text-teal-500 focus:ring-teal-500 w-4 h-4 border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                <span class="font-semibold">Hecho</span>
+              </label>
+            </div>
+            <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg flex items-center gap-2">
+              <span class="text-teal-600 dark:text-teal-400">03.</span> Zancadas Atrás Alternas
+            </h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
+              Da un paso amplio hacia atrás con un pie. Controla el descenso vertical hasta que tu rodilla trasera roce el suelo suavemente, manteniendo el torso erguido. Empuja con fuerza con tu talón delantero para volver al punto de inicio.
+            </p>
+            
+            <details class="no-print mt-3 text-xs text-slate-500 dark:text-slate-400 group">
+              <summary class="cursor-pointer font-bold text-teal-600 dark:text-teal-400 hover:underline">Instrucciones de técnica</summary>
+              <div class="mt-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1">
+                <p>✅ <strong>Foco:</strong> Evitar balanceos laterales. El pie delantero trabaja con tracción total para estabilizar la cadera.</p>
+                <p>💡 <strong>Progresión:</strong> Coloca el pie delantero en un pequeño escalón para aumentar el rango de movimiento.</p>
+                <p>⚠️ <strong>Regresión:</strong> Si pierdes el equilibrio, sujétate del marco de una puerta o silla mientras ejecutas.</p>
+              </div>
+            </details>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-150 dark:border-slate-700 flex justify-between items-center mt-5">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Objetivo de volumen</span>
+            <span class="font-mono-custom font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">8 por Pierna</span>
+          </div>
+        </div>
+
+        <!-- Ejercicio 4 -->
+        <div class="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex flex-col justify-between transition-all duration-300 hover:shadow-md" id="exercise-card-4">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-orange-500 text-white font-extrabold text-[10px] px-2.5 py-1 rounded-md uppercase tracking-wide">Core & Postura</span>
+              <label class="no-print flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 select-none">
+                <input type="checkbox" onchange="toggleExerciseComplete(this, 4)" class="rounded text-teal-500 focus:ring-teal-500 w-4 h-4 border-slate-300 dark:border-slate-600 dark:bg-slate-700">
+                <span class="font-semibold">Hecho</span>
+              </label>
+            </div>
+            <h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg flex items-center gap-2">
+              <span class="text-orange-600">04.</span> Plancha Abdominal Isométrica Activa
+            </h3>
+            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
+              Apoya los antebrazos y puntas de los pies. Alínea tobillos, pelvis, columna y nuca. Empuja activamente el suelo con tus codos para evitar que tus escápulas se hundan, y contrae fuertemente los glúteos para blindar tu zona lumbar.
+            </p>
+            
+            <details class="no-print mt-3 text-xs text-slate-500 dark:text-slate-400 group">
+              <summary class="cursor-pointer font-bold text-orange-600 hover:underline">Instrucciones de técnica</summary>
+              <div class="mt-2 bg-white dark:bg-slate-800/80 p-3 rounded-xl border border-slate-100 dark:border-slate-700 space-y-1">
+                <p>✅ <strong>Foco:</strong> No busques pasar minutos en esta posición; busca una contracción tan intensa que 20 segundos te hagan temblar.</p>
+                <p>💡 <strong>Progresión:</strong> Desplaza tus codos ligeramente más hacia adelante para aumentar la palanca abdominal.</p>
+                <p>⚠️ <strong>Regresión:</strong> Apoya tus rodillas en el suelo, manteniendo la alineación del tronco.</p>
+              </div>
+            </details>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-150 dark:border-slate-700 flex justify-between items-center mt-5">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Duración isométrica</span>
+            <span class="font-mono-custom font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">20 a 30 Segs</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CRONÓMETRO DE DESCANSO INTERACTIVO -->
+      <div class="no-print bg-slate-900 text-white p-6 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-4">
+          <div class="bg-teal-500/10 border border-teal-500/20 text-teal-400 p-3 rounded-2xl">
+            <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h4 class="font-bold text-sm md:text-base">Control Integrado de Recuperación</h4>
+            <p class="text-xs text-slate-400 mt-0.5">El sistema autónomo te avisará cuando tu descanso haya finalizado.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <!-- Timers selectors -->
+          <div class="flex gap-2">
+            <button onclick="setRestTimer(45)" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-xs px-3 py-2 rounded-xl border border-slate-700 transition">45s (Ejercicios)</button>
+            <button onclick="setRestTimer(90)" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-xs px-3 py-2 rounded-xl border border-slate-700 transition">90s (Fuerza)</button>
+            <button onclick="setRestTimer(120)" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-xs px-3 py-2 rounded-xl border border-slate-700 transition">2m (Series)</button>
+          </div>
+          <!-- Display and controls -->
+          <div class="flex items-center gap-3 border-l border-slate-800 pl-4">
+            <span id="rest-time-display" class="font-mono-custom text-2xl font-bold text-teal-400 tracking-wider">00:00</span>
+            <button id="rest-timer-btn" onclick="toggleRestTimer()" class="bg-teal-500 hover:bg-teal-400 active:bg-teal-600 text-slate-950 p-2.5 rounded-xl transition flex items-center justify-center shadow-lg shadow-teal-500/10">
+              <span id="rest-btn-svg">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: GESTIÓN DEL ESTRÉS (4-7-8) -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-md border border-slate-100 dark:border-slate-800 relative overflow-hidden print-break-before print-card">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-relax-50 dark:bg-relax-950/20 rounded-full blur-3xl -z-10"></div>
+      
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-relax-100 dark:bg-relax-950 p-2.5 rounded-2xl text-relax-700 dark:text-relax-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+        </div>
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold">3. Método 4-7-8: Modulación Neural & Desconexión</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Un regulador del sistema simpático especialmente diseñado para inducir relajación antes de dormir.</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 items-center print-full-grid">
+        <!-- Instrucciones -->
+        <div class="space-y-4">
+          <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            Como profesional con alta demanda cognitiva y horas acumuladas de pantalla, tu cerebro opera de manera constante a un alto ritmo de procesamiento mental. Antes de acostarte o después de una intensa jornada laboral, realiza <strong>5 ciclos completos</strong> de esta técnica respiratoria para sincronizar tu ritmo cardíaco y facilitar la transición al sueño profundo.
+          </p>
+          <div class="space-y-3 text-sm text-slate-700 dark:text-slate-300">
+            <div class="flex items-center gap-3 bg-emerald-50/50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-emerald-100/40">
+              <span class="w-6 h-6 rounded-full bg-emerald-400 text-emerald-950 font-bold flex items-center justify-center text-xs">4s</span>
+              <span><strong>Fase 1 - Inhala:</strong> Por la nariz de forma constante y profunda.</span>
+            </div>
+            <div class="flex items-center gap-3 bg-sky-50/50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-sky-100/40">
+              <span class="w-6 h-6 rounded-full bg-sky-400 text-sky-950 font-bold flex items-center justify-center text-xs">7s</span>
+              <span><strong>Fase 2 - Retén:</strong> Detén el aire en tus pulmones, calmando tu frecuencia.</span>
+            </div>
+            <div class="flex items-center gap-3 bg-purple-50/50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-purple-100/40">
+              <span class="w-6 h-6 rounded-full bg-purple-400 text-purple-950 font-bold flex items-center justify-center text-xs">8s</span>
+              <span><strong>Fase 3 - Exhala:</strong> Vacía tus pulmones completamente de manera suave por la boca.</span>
+            </div>
+          </div>
+          
+          <!-- Sound selector for breathing -->
+          <div class="no-print pt-2 flex flex-col gap-1">
+            <span class="text-xs text-slate-400 font-semibold">Estilo de Feedback Sonoro</span>
+            <div class="flex gap-2">
+              <button onclick="setBreatheSoundMode('harmonic')" id="sound-harmonic" class="flex-1 bg-relax-100 dark:bg-relax-950 text-relax-700 dark:text-relax-300 font-bold text-xs py-2 px-3 rounded-lg border border-relax-200 transition">🎶 Ondas Armónicas</button>
+              <button onclick="setBreatheSoundMode('clinical')" id="sound-clinical" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-2 px-3 rounded-lg transition">🔔 Pitido Clínico</button>
+              <button onclick="setBreatheSoundMode('mute')" id="sound-mute" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-2 px-3 rounded-lg transition">🔇 Silencio</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Breathe Simulator Widget -->
+        <div class="no-print bg-relax-50/50 dark:bg-slate-800/50 border border-relax-100 dark:border-slate-800 p-8 rounded-2xl flex flex-col items-center justify-center min-h-[300px] relative">
+          <!-- Pulsing Circle wrapper -->
+          <div class="relative w-48 h-48 flex items-center justify-center mb-6">
+            <!-- Breathing circle indicator -->
+            <div id="breathe-circle" class="absolute w-24 h-24 rounded-full bg-emerald-200 dark:bg-emerald-900 opacity-70 flex items-center justify-center transition-all duration-300"></div>
+            <!-- Concentric decorative target circle -->
+            <div class="absolute w-44 h-44 rounded-full border border-relax-200/50 dark:border-slate-700/50 pointer-events-none"></div>
+            <!-- Central label -->
+            <div class="relative z-10 text-center px-4">
+              <span id="breathe-status" class="block text-sm font-extrabold text-slate-800 dark:text-slate-100">Cuerpo en Reposo</span>
+              <span id="breathe-timer" class="block font-mono-custom text-xl font-bold text-relax-700 dark:text-relax-300 mt-1">Listo</span>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex flex-col items-center gap-3 w-full">
+            <button id="breathe-btn" onclick="toggleBreathingGuide()" class="bg-relax-600 hover:bg-relax-500 active:bg-relax-700 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-relax-500/10 flex items-center gap-2">
+              <span id="breathe-btn-icon">🧘‍♂️</span>
+              <span id="breathe-btn-text">Iniciar Guía Visual</span>
+            </button>
+            <span id="breathe-counter" class="text-xs font-semibold text-relax-700 dark:text-relax-300 opacity-0 transition-opacity">Ciclo: 1 / 5</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORIAL DE LOGS (HISTÓRICO INTERACTIVO) -->
+    <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 shadow-md border border-slate-100 dark:border-slate-800 no-print">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-2xl text-slate-700 dark:text-slate-300">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+        </div>
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold">Bitácora de Control Clínico & Envío</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400">Guarda notas rápidas sobre tu fatiga postural, dolores o comentarios para enviar a tu preparador.</p>
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Nota Clínica / Reporte de la sesión</label>
+          <textarea id="log-notes" rows="3" class="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Escribe aquí si has sentido molestia, fatiga o si el dolor lumbar ha disminuido..."></textarea>
+        </div>
+        
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <span class="text-xs text-slate-400">Tus datos se guardan de forma local. Selecciona cómo quieres enviar el reporte de hoy:</span>
+          <button onclick="saveLogNotes()" class="bg-slate-850 dark:bg-slate-200 text-white dark:text-slate-900 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-700 dark:hover:bg-slate-100 transition">
+            Guardar Nota Local
+          </button>
+        </div>
+
+        <!-- PANEL DE EXPORTACIÓN Y ENVÍO -->
+        <div class="mt-6 p-5 bg-teal-50/50 dark:bg-teal-950/10 rounded-2xl border border-teal-100 dark:border-teal-900/50 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-bold text-sm text-teal-850 dark:text-teal-400">Enviar Reporte del Día</h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Exporta las métricas actuales (pasos, agua, calorías completadas y ejercicios hechos) junto con tu nota clínica.</p>
+          </div>
+          <div class="flex flex-col sm:flex-row items-center gap-3 justify-end">
+            <!-- Botón Copiar al Portapapeles -->
+            <button onclick="copyReportToClipboard()" class="w-full sm:w-auto bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-750 dark:text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition">
+              📋 Copiar para WhatsApp
+            </button>
+            <!-- Botón Enviar por Email -->
+            <button onclick="sendReportByEmail()" class="w-full sm:w-auto bg-teal-600 hover:bg-teal-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-teal-550/10">
+              ✉️ Enviar por Email
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER / PLANIFICACIÓN -->
+    <footer class="bg-slate-100 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <div>
+        <p class="font-bold text-slate-700 dark:text-slate-300">Anotaciones de Adherencia Clínica:</p>
+        <p class="mt-1">Paso a paso. Tu sistema muscular se adaptará de forma rápida y el dolor lumbar bajará drásticamente en un plazo de 10 a 14 días. Consolida el hábito de descanso NEAT como un ritual saludable.</p>
+        <div class="mt-4 border-t border-slate-200 dark:border-slate-800 pt-3 hidden print:block">
+          <h5 class="font-bold text-slate-700 mb-1">Notas Reportadas por el Usuario:</h5>
+          <p id="print-view-notes" class="italic text-slate-600">No se registraron comentarios de sesión hoy.</p>
+        </div>
+      </div>
+      <div class="text-left md:text-right shrink-0">
+        <p class="font-bold text-slate-700 dark:text-slate-300">Plan de Trabajo: Activación y Salud Activa 2026</p>
+        <p class="mt-1">Dossier de Soporte Físico - Fase 1 de Recomposición Corporal.</p>
+        <p class="mt-1">Todos los derechos reservados.</p>
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    // --- APP & STORAGE STATE ---
+    let appState = {
+      theme: 'dark', // 'light' or 'dark'
+      steps: 0,
+      water: 0,
+      calories: 2000,
+      exerciseStatus: {1: false, 2: false, 3: false, 4: false},
+      notes: "",
+      soundOn: true,
+      breatheSoundMode: 'harmonic' // 'harmonic', 'clinical', 'mute'
+    };
+
+    // Audio Engine
+    let audioCtx = null;
+    let biquadFilter = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Lowpass filter for warm analog-like feedback
+        biquadFilter = audioCtx.createBiquadFilter();
+        biquadFilter.type = "lowpass";
+        biquadFilter.frequency.setValueAtTime(600, audioCtx.currentTime);
+        biquadFilter.connect(audioCtx.destination);
+      }
+    }
+
+    // Dynamic Sound Synth Chords (Warm Harmonic Pad)
+    function playHarmonicPad(chordType, duration) {
+      if (!appState.soundOn || appState.breatheSoundMode === 'mute') return;
+      initAudio();
+      
+      const now = audioCtx.currentTime;
+      let freqs = [];
+
+      if (chordType === 'inhale') {
+        // C Major 7th Chord (C3, G3, B3, E4)
+        freqs = [130.81, 196.00, 246.94, 329.63];
+      } else if (chordType === 'hold') {
+        // G Major Sus 4 Chord (G3, C4, D4, G4)
+        freqs = [196.00, 261.63, 293.66, 392.00];
+      } else if (chordType === 'exhale') {
+        // F Major 7th Chord (F3, C4, E4, A4)
+        freqs = [174.61, 261.63, 329.63, 440.00];
+      } else if (chordType === 'rest-complete') {
+        // Celestial completion chord (C3, G3, C4, E4, G4)
+        freqs = [130.81, 196.00, 261.63, 329.63, 392.00];
+      }
+
+      const voices = [];
+      const parentGain = audioCtx.createGain();
+      parentGain.connect(biquadFilter);
+
+      // Volume envelope configuration
+      if (chordType === 'inhale') {
+        parentGain.gain.setValueAtTime(0, now);
+        parentGain.gain.linearRampToValueAtTime(0.2, now + 1.0);
+        parentGain.gain.setValueAtTime(0.2, now + duration - 0.5);
+        parentGain.gain.linearRampToValueAtTime(0, now + duration);
+      } else if (chordType === 'hold') {
+        parentGain.gain.setValueAtTime(0.12, now);
+        parentGain.gain.setValueAtTime(0.12, now + duration - 0.5);
+        parentGain.gain.linearRampToValueAtTime(0, now + duration);
+      } else if (chordType === 'exhale') {
+        parentGain.gain.setValueAtTime(0.2, now);
+        parentGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+      } else {
+        parentGain.gain.setValueAtTime(0.25, now);
+        parentGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+      }
+
+      freqs.forEach(freq => {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(freq, now);
+
+        if (chordType === 'hold') {
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.linearRampToValueAtTime(freq + 1.5, now + 3);
+          osc.frequency.linearRampToValueAtTime(freq - 1.5, now + 6);
+        }
+
+        gainNode.gain.setValueAtTime(0.05, now);
+        
+        osc.connect(gainNode);
+        gainNode.connect(parentGain);
+        
+        osc.start();
+        osc.stop(now + duration);
+      });
+    }
+
+    // Clinical Standard Bleep (fallback)
+    function playClinicalBeep(freq, duration) {
+      if (!appState.soundOn || appState.breatheSoundMode === 'mute') return;
+      initAudio();
+      
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(now + duration);
+    }
+
+    function triggerAudioGuide(phaseType, duration) {
+      if (appState.breatheSoundMode === 'harmonic') {
+        playHarmonicPad(phaseType, duration);
+      } else if (appState.breatheSoundMode === 'clinical') {
+        let f = phaseType === 'inhale' ? 440 : (phaseType === 'hold' ? 554 : 330);
+        playClinicalBeep(f, 0.4);
+      }
+    }
+
+    // --- STREAMING_CHUNK: State management and local storage syncing... -->
+    // --- PERSISTENCE AND UI UPDATE ---
+    window.onload = function() {
+      const savedState = localStorage.getItem('proyectoCompositor_state');
+      if (savedState) {
+        try {
+          appState = JSON.parse(savedState);
+        } catch(e) {
+          console.error("Error recuperando persistencia", e);
+        }
+      }
+
+      // Sync dark mode
+      if (appState.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+
+      updateUI();
+    };
+
+    function saveState() {
+      localStorage.setItem('proyectoCompositor_state', JSON.stringify(appState));
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById('val-steps').textContent = appState.steps.toLocaleString();
+      document.getElementById('val-water').textContent = appState.water;
+      document.getElementById('val-calories').textContent = appState.calories.toLocaleString() + ' kcal';
+      document.getElementById('log-notes').value = appState.notes;
+      document.getElementById('print-view-notes').textContent = appState.notes ? appState.notes : "No se registraron comentarios de sesión hoy.";
+
+      let completedCount = 0;
+      for (let i = 1; i <= 4; i++) {
+        const checkbox = document.querySelector(`#exercise-card-${i} input[type="checkbox"]`);
+        if (checkbox) {
+          checkbox.checked = appState.exerciseStatus[i];
+          updateCardVisuals(checkbox, i);
+          if (appState.exerciseStatus[i]) completedCount++;
+        }
+      }
+
+      const progressPercent = Math.round((completedCount / 4) * 100);
+      document.getElementById('overall-progress-bar').style.width = `${progressPercent}%`;
+      document.getElementById('overall-progress-text').textContent = `${progressPercent}%`;
+
+      const motivationText = document.getElementById('tracker-motivation');
+      if (progressPercent === 0) {
+        motivationText.textContent = "⏱️ ¡Haz el primer esfuerzo!";
+        motivationText.className = "mt-4 bg-white dark:bg-slate-800 p-2 rounded-xl text-center text-xs border border-slate-150 dark:border-slate-700 font-medium text-slate-500";
+      } else if (progressPercent < 100) {
+        motivationText.textContent = "💪 Buen camino. ¡Continúa!";
+        motivationText.className = "mt-4 bg-teal-50 dark:bg-teal-950/40 p-2 rounded-xl text-center text-xs border border-teal-100 dark:border-teal-900 font-bold text-teal-600 dark:text-teal-400";
+      } else {
+        motivationText.textContent = "🏆 ¡Fuerza completada por hoy!";
+        motivationText.className = "mt-4 bg-indigo-50 dark:bg-indigo-950/40 p-2 rounded-xl text-center text-xs border border-indigo-100 dark:border-indigo-900 font-bold text-indigo-600 dark:text-indigo-400";
+      }
+
+      const soundBtn = document.getElementById('neat-sound-btn');
+      soundBtn.textContent = appState.soundOn ? '🔊 Sonido' : '🔇 Silencio';
+
+      document.getElementById('sound-harmonic').className = appState.breatheSoundMode === 'harmonic' ? "flex-1 bg-relax-600 text-white font-bold text-xs py-2 px-3 rounded-lg border border-relax-600 transition animate-pulse" : "flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-2 px-3 rounded-lg transition border border-transparent";
+      document.getElementById('sound-clinical').className = appState.breatheSoundMode === 'clinical' ? "flex-1 bg-relax-600 text-white font-bold text-xs py-2 px-3 rounded-lg border border-relax-600 transition" : "flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-2 px-3 rounded-lg transition border border-transparent";
+      document.getElementById('sound-mute').className = appState.breatheSoundMode === 'mute' ? "flex-1 bg-relax-600 text-white font-bold text-xs py-2 px-3 rounded-lg border border-relax-600 transition" : "flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs py-2 px-3 rounded-lg transition border border-transparent";
+    }
+
+    function toggleTheme() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        appState.theme = 'light';
+      } else {
+        document.documentElement.classList.add('dark');
+        appState.theme = 'dark';
+      }
+      saveState();
+    }
+
+    // --- TRACKING METRICS INTERACTORS ---
+    function addMetric(key, amount) {
+      if (key === 'steps') {
+        appState.steps = Math.max(0, appState.steps + amount);
+      } else if (key === 'water') {
+        appState.water = Math.max(0, appState.water + amount);
+      }
+      saveState();
+    }
+
+    function adjustCalories(amount) {
+      appState.calories = Math.max(0, appState.calories + amount);
+      saveState();
+    }
+
+    function resetMetrics() {
+      appState.steps = 0;
+      appState.water = 0;
+      appState.calories = 2000;
+      appState.exerciseStatus = {1: false, 2: false, 3: false, 4: false};
+      saveState();
+    }
+
+    function saveLogNotes() {
+      appState.notes = document.getElementById('log-notes').value;
+      saveState();
+    }
+
+    // --- STREAMING_CHUNK: Report text generators and triggers... -->
+    // --- REPORT EXPORTERS ---
+    function generateReportText() {
+      let completedExercises = [];
+      const exerciseNames = {
+        1: "Sentadillas con Pausa Isométrica",
+        2: "Flexiones Inclinadas en Mesa",
+        3: "Zancadas Atrás Alternas",
+        4: "Plancha Abdominal Isométrica Activa"
+      };
+      
+      for (let i = 1; i <= 4; i++) {
+        if (appState.exerciseStatus[i]) {
+          completedExercises.push(`[✓] ${exerciseNames[i]}`);
+        } else {
+          completedExercises.push(`[ ] ${exerciseNames[i]}`);
+        }
+      }
+
+      const notesContent = document.getElementById('log-notes').value || appState.notes || "Sin observaciones.";
+
+      return `📋 REPORTE DIARIO - ACTIVACIÓN Y SALUD ACTIVA 2026
+Fecha de Envío: ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+🏃 PASOS DEL DÍA: ${appState.steps.toLocaleString()} / 10,000
+💧 HIDRATACIÓN: ${appState.water} / 8 vasos
+🔥 CALORÍAS CONSUMIDAS: ${appState.calories} kcal (Meta: ~2,000)
+
+🏋️ EJERCICIOS COMPLETADOS:
+${completedExercises.join('\n')}
+
+✍️ NOTAS CLÍNICAS Y SENSACIONES:
+"${notesContent}"`;
+    }
+
+    function copyReportToClipboard() {
+      saveLogNotes();
+      const text = generateReportText();
+      
+      const tempTextArea = document.createElement("textarea");
+      tempTextArea.value = text;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showNotification("📋 ¡Copiado!", "El reporte diario ha sido copiado a tu portapapeles. Pégalo directamente en tu chat de mensajería.");
+        } else {
+          showNotification("❌ Error", "No se pudo copiar automáticamente. Intenta seleccionarlo manualmente.", true);
+        }
+      } catch (err) {
+        showNotification("❌ Error", "No soportado en este navegador.", true);
+      }
+      
+      document.body.removeChild(tempTextArea);
+    }
+
+    function sendReportByEmail() {
+      saveLogNotes();
+      const subject = encodeURIComponent("Reporte Diario de Activación - Plan de Fuerza & NEAT");
+      const body = encodeURIComponent(generateReportText());
+      const mailtoUrl = `mailto:preparador@ejemplo.com?subject=${subject}&body=${body}`;
+      window.location.href = mailtoUrl;
+    }
+
+    // Custom non-alert toast notification
+    function showNotification(title, message, isError = false) {
+      const existing = document.getElementById('clinical-toast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.id = 'clinical-toast';
+      toast.className = `fixed bottom-6 right-6 z-50 p-5 rounded-2xl shadow-2xl max-w-sm border transition-all duration-300 transform translate-y-0 no-print ${
+        isError 
+          ? 'bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-100' 
+          : 'bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-100'
+      }`;
+      
+      toast.innerHTML = `
+        <h5 class="font-bold text-sm">${title}</h5>
+        <p class="text-xs mt-1 leading-relaxed opacity-90">${message}</p>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    function toggleExerciseComplete(checkbox, exerciseId) {
+      appState.exerciseStatus[exerciseId] = checkbox.checked;
+      if (checkbox.checked) {
+        playClinicalBeep(587.33, 0.15); // Positive chime
+      }
+      saveState();
+    }
+
+    function updateCardVisuals(checkbox, id) {
+      const card = document.getElementById(`exercise-card-${id}`);
+      if (!card) return;
+      if (checkbox.checked) {
+        card.classList.remove('bg-slate-50', 'dark:bg-slate-800/30', 'border-slate-100', 'dark:border-slate-800');
+        card.classList.add('bg-teal-50/50', 'dark:bg-teal-950/20', 'border-teal-200', 'dark:border-teal-900/50');
+      } else {
+        card.classList.remove('bg-teal-50/50', 'dark:bg-teal-950/20', 'border-teal-200', 'dark:border-teal-900/50');
+        card.classList.add('bg-slate-50', 'dark:bg-slate-800/30', 'border-slate-100', 'dark:border-slate-800');
+      }
+    }
+
+    // --- STREAMING_CHUNK: Timers and interval controls... -->
+    // --- NEAT TIMER CONTROLLERS ---
+    let neatInterval;
+    let neatRunning = false;
+    let neatSecondsSet = 60 * 60; // 60 mins default
+    let neatSecondsLeft = 60 * 60;
+
+    function changeNeatDuration(mins) {
+      if (neatRunning) toggleNeatTimer();
+      neatSecondsSet = mins * 60;
+      neatSecondsLeft = neatSecondsSet;
+      
+      [30, 45, 60].forEach(t => {
+        const btn = document.getElementById(`neat-${t}`);
+        if (t === mins) {
+          btn.className = "text-xs px-2.5 py-1 rounded-lg transition font-bold bg-white dark:bg-slate-700 shadow-sm";
+        } else {
+          btn.className = "text-xs px-2.5 py-1 rounded-lg transition font-medium text-slate-400";
+        }
+      });
+      
+      updateNeatDisplay();
+    }
+
+    function updateNeatDisplay() {
+      const display = document.getElementById('neat-timer-display');
+      let m = Math.floor(neatSecondsLeft / 60);
+      let s = neatSecondsLeft % 60;
+      display.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function toggleNeatTimer() {
+      const btnIcon = document.getElementById('neat-btn-icon');
+      const btnText = document.getElementById('neat-btn-text');
+      const display = document.getElementById('neat-timer-display');
+      
+      if (neatRunning) {
+        clearInterval(neatInterval);
+        neatRunning = false;
+        btnIcon.textContent = '⏱️';
+        btnText.textContent = 'Reanudar';
+      } else {
+        neatRunning = true;
+        btnIcon.textContent = '⏸️';
+        btnText.textContent = 'Pausar';
+        
+        neatInterval = setInterval(() => {
+          if (neatSecondsLeft > 0) {
+            neatSecondsLeft--;
+            updateNeatDisplay();
+          } else {
+            clearInterval(neatInterval);
+            neatRunning = false;
+            display.textContent = '🚨 ¡ALERTA NEAT! Levántate de la silla';
+            btnIcon.textContent = '⏱️';
+            btnText.textContent = 'Iniciar Nuevo';
+            
+            // Alert trigger sound
+            playClinicalBeep(523.25, 0.4); 
+            setTimeout(() => playClinicalBeep(523.25, 0.4), 200);
+            
+            neatSecondsLeft = neatSecondsSet;
+          }
+        }, 1000);
+      }
+    }
+
+    function toggleSoundPreference() {
+      appState.soundOn = !appState.soundOn;
+      saveState();
+    }
+
+    // --- WORKOUT REST TIMER ---
+    let restInterval;
+    let restRunning = false;
+    let restSeconds = 0;
+
+    function setRestTimer(sec) {
+      if (restRunning) toggleRestTimer();
+      restSeconds = sec;
+      updateRestDisplay();
+    }
+
+    function updateRestDisplay() {
+      const display = document.getElementById('rest-time-display');
+      let mins = Math.floor(restSeconds / 60);
+      let secs = restSeconds % 60;
+      display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function toggleRestTimer() {
+      const btnSvg = document.getElementById('rest-btn-svg');
+      
+      if (restRunning) {
+        clearInterval(restInterval);
+        restRunning = false;
+        btnSvg.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+      } else {
+        if (restSeconds <= 0) {
+          playClinicalBeep(220, 0.3); // warning buzz
+          return;
+        }
+        restRunning = true;
+        btnSvg.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6"/></svg>`;
+        
+        restInterval = setInterval(() => {
+          if (restSeconds > 0) {
+            restSeconds--;
+            updateRestDisplay();
+          } else {
+            clearInterval(restInterval);
+            restRunning = false;
+            btnSvg.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+            
+            playHarmonicPad('rest-complete', 1.8);
+          }
+        }, 1000);
+      }
+    }
+
+    // --- STREAMING_CHUNK: Breathing guide engine... -->
+    // --- BREATHING ENGINE (4-7-8) ---
+    let breatheInterval;
+    let breatheRunning = false;
+    let breatheCycle = 1;
+    let breathPhase = 0; // 0: Inhale (4s), 1: Hold (7s), 2: Exhale (8s)
+    let cycleTimeout;
+
+    function setBreatheSoundMode(mode) {
+      appState.breatheSoundMode = mode;
+      saveState();
+    }
+
+    function toggleBreathingGuide() {
+      const btnText = document.getElementById('breathe-btn-text');
+      const btnIcon = document.getElementById('breathe-btn-icon');
+      const counter = document.getElementById('breathe-counter');
+      const btn = document.getElementById('breathe-btn');
+      
+      if (breatheRunning) {
+        stopBreathing();
+      } else {
+        breatheRunning = true;
+        breatheCycle = 1;
+        breathPhase = 0;
+        
+        btnText.textContent = 'Detener Práctica';
+        btnIcon.textContent = '⏹️';
+        btn.classList.replace('bg-relax-600', 'bg-slate-700');
+        btn.classList.replace('hover:bg-relax-500', 'hover:bg-slate-600');
+        
+        counter.classList.remove('opacity-0');
+        counter.textContent = `Ciclo: ${breatheCycle} / 5`;
+        
+        runBreathingSequence();
+      }
+    }
+
+    function stopBreathing() {
+      clearTimeout(cycleTimeout);
+      clearInterval(breatheInterval);
+      breatheRunning = false;
+      
+      const btnText = document.getElementById('breathe-btn-text');
+      const btnIcon = document.getElementById('breathe-btn-icon');
+      const circle = document.getElementById('breathe-circle');
+      const label = document.getElementById('breathe-status');
+      const displayTimer = document.getElementById('breathe-timer');
+      const counter = document.getElementById('breathe-counter');
+      const btn = document.getElementById('breathe-btn');
+      
+      btnText.textContent = 'Iniciar Guía Visual';
+      btnIcon.textContent = '🧘‍♂️';
+      btn.classList.replace('bg-slate-700', 'bg-relax-600');
+      btn.classList.replace('hover:bg-slate-600', 'hover:bg-relax-500');
+      counter.classList.add('opacity-0');
+      
+      // Reset circle styling
+      circle.style.transform = 'scale(1)';
+      circle.className = "absolute w-24 h-24 rounded-full bg-emerald-200 dark:bg-emerald-900 opacity-70 transition-all duration-300";
+      label.textContent = "Cuerpo en Reposo";
+      displayTimer.textContent = "Listo";
+    }
+
+    function runBreathingSequence() {
+      if (!breatheRunning) return;
+
+      const circle = document.getElementById('breathe-circle');
+      const label = document.getElementById('breathe-status');
+      const displayTimer = document.getElementById('breathe-timer');
+      const counter = document.getElementById('breathe-counter');
+
+      circle.style.transition = 'none';
+
+      if (breathPhase === 0) {
+        // INHALE - 4 SECONDS
+        label.textContent = "¡INHALE!";
+        circle.className = "absolute w-24 h-24 rounded-full bg-emerald-300 dark:bg-emerald-800 opacity-80";
+        
+        setTimeout(() => {
+          circle.style.transition = 'transform 4s cubic-bezier(0.4, 0, 0.2, 1)';
+          circle.style.transform = 'scale(1.8)';
+        }, 50);
+
+        triggerAudioGuide('inhale', 4.0);
+        countdownBreathe(4, displayTimer);
+
+        cycleTimeout = setTimeout(() => {
+          breathPhase = 1;
+          runBreathingSequence();
+        }, 4000);
+
+      } else if (breathPhase === 1) {
+        // HOLD - 7 SECONDS
+        label.textContent = "RETENGA EL AIRE";
+        circle.className = "absolute w-24 h-24 rounded-full bg-sky-300 dark:bg-sky-800 opacity-80";
+        circle.style.transform = 'scale(1.8)';
+
+        triggerAudioGuide('hold', 7.0);
+        countdownBreathe(7, displayTimer);
+
+        cycleTimeout = setTimeout(() => {
+          breathPhase = 2;
+          runBreathingSequence();
+        }, 7000);
+
+      } else if (breathPhase === 2) {
+        // EXHALE - 8 SECONDS
+        label.textContent = "EXHALE SUAVEMENTE";
+        circle.className = "absolute w-24 h-24 rounded-full bg-purple-300 dark:bg-purple-800 opacity-80";
+        
+        setTimeout(() => {
+          circle.style.transition = 'transform 8s cubic-bezier(0.4, 0, 0.2, 1)';
+          circle.style.transform = 'scale(1)';
+        }, 50);
+
+        triggerAudioGuide('exhale', 8.0);
+        countdownBreathe(8, displayTimer);
+
+        cycleTimeout = setTimeout(() => {
+          breatheCycle++;
+          if (breatheCycle <= 5) {
+            breathPhase = 0;
+            counter.textContent = `Ciclo: ${breatheCycle} / 5`;
+            runBreathingSequence();
+          } else {
+            stopBreathing();
+            label.textContent = "Completado";
+            displayTimer.textContent = "Excelente";
+            playHarmonicPad('rest-complete', 3.0);
+          }
+        }, 8000);
+      }
+    }
+
+    function countdownBreathe(seconds, element) {
+      clearInterval(breatheInterval);
+      let count = seconds;
+      element.textContent = `${count}s`;
+      
+      breatheInterval = setInterval(() => {
+        count--;
+        if (count >= 0) {
+          element.textContent = `${count}s`;
+        } else {
+          clearInterval(breatheInterval);
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
